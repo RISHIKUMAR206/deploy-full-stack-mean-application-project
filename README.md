@@ -269,9 +269,9 @@ GitHub → Your Repo → Settings → Secrets and variables → Actions → New 
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `DOCKER_USERNAME` | Your Docker Hub username | `manishjangra97` |
+| `DOCKER_USERNAME` | Your Docker Hub username | `rishikumar206` |
 | `DOCKER_PASSWORD` | Docker Hub password or **Access Token** | `dckr_pat_xxxx` |
-| `EC2_HOST` | IP address of your deployment server | `192.168.1.100` |
+| `EC2_HOST` | IP address of your deployment server | `13.123.xx.xx` |
 | `EC2_USER` | SSH username on server | `ubuntu` |
 | `EC2_PRIVATE_KEY` | Private SSH key (contents of `~/.ssh/id_rsa`) | `-----BEGIN...` |
 
@@ -489,11 +489,6 @@ docker compose ps
 # Check logs
 docker compose logs -f
 ```
-### Running Container Screenshot
-
-![Running Container](./screenshots/server-running-containers.png)
-
-
 App will be available at: **http://\<EC2_PUBLIC_IP\>**
 
 ---
@@ -532,34 +527,50 @@ After this, every push to `main` will:
 ### EC2 Deployment Architecture
 
 ```
-Developer
-    │
-    │  git push origin main
-    ▼
-GitHub Actions (main.yml)
-    │
-    ├──→ Build & push images to Docker Hub
-    │
-    └──→ SSH into EC2 (appleboy/ssh-action)
-              │
-              ▼
-         EC2 Instance
-         ┌──────────────────────────┐
-         │  docker compose up -d    │
-         │  ┌────────┐ ┌─────────┐  │
-         │  │ nginx  │ │ backend │  │
-         │  │  :80   │ │  :8080  │  │
-         │  └────────┘ └─────────┘  │
-         │  ┌──────────┐            │
-         │  │ frontend │            │
-         │  │  :8081   │            │
-         │  └──────────┘            │
-         │  ┌──────────┐            │
-         │  │ mongodb  │            │
-         │  │  :27017  │            │
-         │  └──────────┘            │
-         └──────────────────────────┘
-              Public IP:80 → Internet
+[ Developer ]
+             │
+             │ git push origin main
+             ▼
+    ┌──────────────────┐
+    │  GitHub Actions  │
+    │   (main.yml)     │
+    └────────┬─────────┘
+             │
+     ┌───────┴───────┐
+     ▼               ▼
+ [ CI Stage ]    [ Security Stage ]
+ Build Docker    Scan Images with
+   Images             Trivy
+     │               │
+     └───────┬───────┘
+             ▼
+     ┌───────────────┐
+     │  Docker Hub   │ <─── Images Pushed & Stored
+     └───────┬───────┘
+             │
+             ▼ (SSH via Port 22)
+    ┌──────────────────────────────────┐
+    │         AWS EC2 Instance         │
+    │  ┌────────────────────────────┐  │
+    │  │     docker compose pull    │  │
+    │  │     docker compose up -d   │  │
+    │  └─────────────┬──────────────┘  │
+    │                │                 │
+    │        ┌───────┴───────┐         │
+    │        ▼               ▼         │
+    │  ┌──────────┐    ┌──────────┐    │
+    │  │  nginx   │    │ backend  │    │
+    │  │ (Port 80)│    │(Port 8080)│   │
+    │  └──────────┘    └──────────┘    │
+    │  ┌──────────┐    ┌──────────┐    │
+    │  │ frontend │    │ mongodb  │    │
+    │  │(Port 8081)│   │(Port 27017)│  │
+    │  └──────────┘    └──────────┘    │
+    └──────────────────────────────────┘
+             │
+             ▼
+       [ Public Access ]
+    http://<EC2_PUBLIC_IP>
 ```
 
 ---
