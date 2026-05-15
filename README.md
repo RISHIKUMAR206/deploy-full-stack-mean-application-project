@@ -1,55 +1,33 @@
 # MEAN Stack CRUD App — Tutorials Manager
 
-A full-stack CRUD application built with the **MEAN stack** (MongoDB, Express, Angular 15, Node.js), containerised with Docker, served via Nginx, and deployed automatically through a GitHub Actions CI/CD pipeline.
+This is a production-grade MEAN Stack (MongoDB, Express, Angular 15, Node.js) application. It features a complete DevSecOps lifecycle, including Infrastructure as Code (Terraform), Container Security (Trivy), and Automated CI/CD (Jenkins & GitHub Actions).
 
-> **Live URL (local):** http://localhost  
+> **Live URL (local):** http://localhost:8081 
 > **API Base:** http://localhost/api/tutorials
-
-### Screenshot [EC2 Server]
-
-![Preview 1](./screenshots/preview-1.png)
-
-![Preview 2](./screenshots/preview-2.png)
-
-
----
 
 ## 📁 Project Structure
 
 ```
 crud-dd-task-mean-app/
-├── .github/
-│   └── workflows/
-│       └── main.yml          # GitHub Actions CI/CD pipeline
-├── backend/
-│   ├── app/
-│   │   ├── config/
-│   │   │   └── db.config.js   # MongoDB connection URL
-│   │   ├── controllers/
-│   │   │   └── tutorial.controller.js
-│   │   ├── models/
-│   │   │   ├── index.js
-│   │   │   └── tutorial.model.js
-│   │   └── routes/
-│   │       └── turorial.routes.js
-│   ├── .dockerignore
-│   ├── Dockerfile
-│   ├── package.json
-│   └── server.js
-├── frontend/
-│   ├── src/
-│   │   └── app/
-│   │       └── services/
-│   │           └── tutorial.service.ts  # API base URL setting
-│   ├── .dockerignore
-│   ├── Dockerfile
-│   ├── nginx.conf             # Nginx config for Angular container
-│   ├── angular.json
-│   └── package.json
+├── .github/workflows/   
+│   └── main.yml              # GitHub Actions (CI/CD for Auto-Deployment)
+├── backend/                  # Node.js & Express API Service
+│   ├── app/                  # Business logic (Models, Controllers, Routes)
+│   ├── Dockerfile            # Backend containerization
+│   └── server.js             # Main API entry point (Port 8080)
+├── frontend/                 # Angular 15 Client Application
+│   ├── src/                  # Application source code
+│   ├── Dockerfile            # Multi-stage build (Node & Nginx)
+│   └── nginx.conf            # Internal Nginx config for Angular SPA
 ├── nginx/
-│   └── default.conf           # Nginx reverse proxy config (port 80)
-├── docker-compose.yml
-└── README.md
+│   └── default.conf          # Main Reverse Proxy (Port 80 routing)
+├── screenshots/              # UI & Deployment proof images
+├── trivy-reports/            # Container vulnerability security scans
+├── .gitignore                # Files to ignore in Git
+├── Jenkinsfile               # Jenkins pipeline for automation
+├── docker-compose.yml        # Orchestration for all services
+├── main.tf                   # Terraform (Infrastructure as Code for AWS)
+└── README.md                 # Project documentation
 ```
 
 ---
@@ -110,31 +88,37 @@ crud-nginx      nginx:stable-alpine      running         0.0.0.0:80->80/tcp
 ## 🧱 Architecture
 
 ```
-Browser
-   │
-   ▼
-┌─────────────────────────────────┐
-│  Nginx Reverse Proxy  :80       │
-│  (crud-nginx container)         │
-└──────────┬──────────────────────┘
-           │
-    ┌──────┴──────────────┐
-    │                     │
-    ▼                     ▼
-/api/*              everything else
-    │                     │
-    ▼                     ▼
-┌──────────┐        ┌───────────┐
-│ Backend  │        │ Frontend  │
-│ Node.js  │        │ Angular   │
-│  :8080   │        │  :8081    │
-└────┬─────┘        └───────────┘
-     │
-     ▼
-┌──────────┐
-│ MongoDB  │
-│  :27017  │
-└──────────┘
+[ Public Internet ]
+              │
+              ▼ (Port 80)
+    ┌──────────────────────────────────────────────────────────┐
+    │                AWS EC2 Instance (IaC)                    │
+    │  ┌────────────────────────────────────────────────────┐  │
+    │  │               Nginx Reverse Proxy                  │  │
+    │  │           (Internal Port 80 exposed)               │  │
+    │  └────────┬─────────────────────────────┬─────────────┘  │
+    │           │                             │                │
+    │     ┌─────┴────────┐               ┌────┴─────────┐      │
+    │     ▼ (/api/*)     ▼               ▼ (/* Static)  ▼      │
+    │  ┌────────────┐   (Internal)    ┌─────────────┐   (Net)  │
+    │  │  Backend   │ <─────────────> │  Frontend   │ <───────┼─── Private Bridge
+    │  │ (Node.js)  │  (Port 8080)    │  (Angular)  │ (8081)  │    Network
+    │  └─────┬──────┘                 └─────────────┘          │
+    │        │                                                 │
+    │        ▼ (Port 27017)                                    │
+    │  ┌────────────┐                                          │
+    │  │  MongoDB   │ <────────────────────────────────────────┼─── Data Volume
+    │  │ (Database) │          (mongo_data persistence)        │
+    │  └────────────┘                                          │
+    └──────────────────────────────────────────────────────────┘
+           ▲
+           │ (Deployment Pipeline)
+    ┌──────┴───────────────────────────────────────────────────┐
+    │                 [ DevSecOps Layer ]                      │
+    │ 1. Trivy Scan: Image Security Audit                      │
+    │ 2. Jenkins: Port 8080 (Automation Server)                │
+    │ 3. GitHub Actions: SSH Deployment (Port 22)              │
+    └──────────────────────────────────────────────────────────┘
 
 All containers → custom-network (Docker bridge)
 MongoDB data → persisted in `mongo_data` named volume
@@ -259,12 +243,6 @@ Push to main branch
                git pull + docker
                compose up -d)
 ```
-
-### Screenshots
-![Login Build Push On Docker](./screenshots/ci-cd-login-build-push-docker.png)
-
-![Deploy On EC2](./screenshots/ci-cd-deploy-to-ec2.png)
-
 ### Jobs
 
 | Job | Trigger | What it does |
