@@ -1,0 +1,5 @@
+
+deploy-full-stack-mean-application-project-frontend:latest (alpine 3.23.4)
+==========================================================================
+Total: 0 (UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
